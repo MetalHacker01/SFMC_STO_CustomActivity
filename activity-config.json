@@ -1,0 +1,157 @@
+{
+  "workflowApiVersion": "1.1",
+  "metaData": {
+    "icon": "https://cdn-icons-png.flaticon.com/512/3652/3652191.png",
+    "category": "message",
+    "displayName": "Send Time Optimization",
+    "description": "Calculates optimal send times based on geographic segments, respecting business rules and local holidays"
+  },
+  "type": "REST",
+  "lang": {
+    "en-US": {
+      "name": "Send Time Optimization",
+      "description": "Intelligently calculates the best send time for each contact based on their timezone, configured time windows, and business rules"
+    }
+  },
+  "arguments": {
+    "execute": {
+      "inArguments": [
+        {
+          "contactKey": "{{Contact.Key}}",
+          "subscriberKey": "{{Contact.Attribute.Master_Subscriber.SubscriberKey}}",
+          "emailAddress": "{{InteractionDefaults.Email}}",
+          "geosegment": "{{Contact.Attribute.Master_Subscriber.Geosegment}}",
+          "entryTime": "{{Contact.Attribute.Master_Subscriber.EntryTime}}",
+          "dataExtensionKey": "{{Context.DataExtensionKey}}",
+          "journeyId": "{{Context.DefinitionId}}",
+          "activityInstanceId": "{{Context.ActivityInstanceId}}"
+        }
+      ],
+      "outArguments": [
+        {
+          "convertedTime": "{{{ConvertedTime}}}",
+          "originalTime": "{{{OriginalTime}}}",
+          "timezoneOffset": "{{{TimezoneOffset}}}",
+          "adjustmentReason": "{{{AdjustmentReason}}}",
+          "processingStatus": "{{{ProcessingStatus}}}"
+        }
+      ],
+      "url": "https://your-app-domain.com/execute",
+      "verb": "POST",
+      "body": "",
+      "format": "json",
+      "useJwt": true,
+      "timeout": 30000,
+      "retryCount": 3,
+      "retryDelay": 1000,
+      "concurrentRequests": 50
+    }
+  },
+  "configurationArguments": {
+    "applicationExtensionKey": "sto-custom-activity-key",
+    "save": {
+      "url": "https://your-app-domain.com/save",
+      "verb": "POST",
+      "useJwt": true,
+      "timeout": 10000
+    },
+    "publish": {
+      "url": "https://your-app-domain.com/publish", 
+      "verb": "POST",
+      "useJwt": true,
+      "timeout": 10000
+    },
+    "validate": {
+      "url": "https://your-app-domain.com/validate",
+      "verb": "POST",
+      "useJwt": true,
+      "timeout": 10000
+    },
+    "stop": {
+      "url": "https://your-app-domain.com/stop",
+      "verb": "POST",
+      "useJwt": true,
+      "timeout": 10000
+    }
+  },
+  "wizardSteps": [
+    {
+      "label": "Configure Send Time Optimization",
+      "key": "step1"
+    }
+  ],
+  "userInterfaces": {
+    "configModal": {
+      "height": 700,
+      "width": 900,
+      "fullscreen": false
+    }
+  },
+  "edit": {
+    "uri": "index.html"
+  },
+  "schema": {
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+      "skipWeekends": {
+        "type": "boolean",
+        "title": "Skip Weekends",
+        "description": "Exclude weekends from send times",
+        "default": true
+      },
+      "skipHolidays": {
+        "type": "boolean", 
+        "title": "Skip Public Holidays",
+        "description": "Exclude public holidays from send times",
+        "default": false
+      },
+      "timeWindows": {
+        "type": "array",
+        "title": "Time Windows",
+        "description": "Allowed time windows for sending",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "startHour": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 23
+            },
+            "endHour": {
+              "type": "integer", 
+              "minimum": 0,
+              "maximum": 23
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": ["startHour", "endHour", "enabled"]
+        }
+      },
+      "defaultTimezone": {
+        "type": "string",
+        "title": "Default Timezone",
+        "description": "Fallback timezone for contacts without geosegment data",
+        "default": "UTC-6",
+        "enum": ["UTC-12", "UTC-11", "UTC-10", "UTC-9", "UTC-8", "UTC-7", "UTC-6", "UTC-5", "UTC-4", "UTC-3", "UTC-2", "UTC-1", "UTC+0", "UTC+1", "UTC+2", "UTC+3", "UTC+4", "UTC+5", "UTC+6", "UTC+7", "UTC+8", "UTC+9", "UTC+10", "UTC+11", "UTC+12"]
+      },
+      "holidayApiEnabled": {
+        "type": "boolean",
+        "title": "Enable Holiday API",
+        "description": "Use external API for holiday checking",
+        "default": true
+      },
+      "fallbackBehavior": {
+        "type": "string",
+        "title": "Fallback Behavior",
+        "description": "What to do when optimal time cannot be calculated",
+        "default": "next_business_day",
+        "enum": ["next_business_day", "immediate", "default_time"]
+      }
+    },
+    "required": ["timeWindows"]
+  }
+}

@@ -1,0 +1,487 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Send Time Optimization Activity Dashboard",
+    "tags": ["sto-activity", "sfmc", "journey-builder"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Application Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"sto-activity\"}",
+            "legendFormat": "Application Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sto_activity_health_status",
+            "legendFormat": "Health Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "UNHEALTHY",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "HEALTHY",
+                    "color": "green"
+                  },
+                  "2": {
+                    "text": "DEGRADED",
+                    "color": "yellow"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Request Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(sto_activity_http_requests_total[5m])",
+            "legendFormat": "Requests/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(sto_activity_http_requests_total{status=~\"5..\"}[5m]) / rate(sto_activity_http_requests_total[5m])",
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.05
+                },
+                {
+                  "color": "red",
+                  "value": 0.10
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        }
+      },
+      {
+        "id": 5,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_activity_http_requests_total[5m])",
+            "legendFormat": "Total Requests"
+          },
+          {
+            "expr": "rate(sto_activity_http_requests_total{status=~\"2..\"}[5m])",
+            "legendFormat": "2xx Success"
+          },
+          {
+            "expr": "rate(sto_activity_http_requests_total{status=~\"4..\"}[5m])",
+            "legendFormat": "4xx Client Error"
+          },
+          {
+            "expr": "rate(sto_activity_http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "5xx Server Error"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 4
+        }
+      },
+      {
+        "id": 6,
+        "title": "Response Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sto_activity_http_request_duration_seconds{quantile=\"0.50\"}",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "sto_activity_http_request_duration_seconds{quantile=\"0.95\"}",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "sto_activity_http_request_duration_seconds{quantile=\"0.99\"}",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Seconds",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 4
+        }
+      },
+      {
+        "id": 7,
+        "title": "Contact Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_activity_contacts_processed_total[5m])",
+            "legendFormat": "Contacts Processed/sec"
+          },
+          {
+            "expr": "rate(sto_activity_contact_processing_failures_total[5m])",
+            "legendFormat": "Processing Failures/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Contacts/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 12
+        }
+      },
+      {
+        "id": 8,
+        "title": "Send Time Calculation Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sto_activity_send_time_calculation_duration_seconds{quantile=\"0.50\"}",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "sto_activity_send_time_calculation_duration_seconds{quantile=\"0.95\"}",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "rate(sto_activity_send_time_calculations_total[5m])",
+            "legendFormat": "Calculations/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Seconds / Rate",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 12
+        }
+      },
+      {
+        "id": 9,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sto_activity_memory_usage_bytes",
+            "legendFormat": "Memory Used"
+          },
+          {
+            "expr": "sto_activity_memory_limit_bytes",
+            "legendFormat": "Memory Limit"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Bytes",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 20
+        }
+      },
+      {
+        "id": 10,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sto_activity_cpu_usage_ratio",
+            "legendFormat": "CPU Usage"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Percentage",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 20
+        }
+      },
+      {
+        "id": 11,
+        "title": "External API Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_activity_sfmc_api_requests_total[5m])",
+            "legendFormat": "SFMC API Requests/sec"
+          },
+          {
+            "expr": "rate(sto_activity_sfmc_api_failures_total[5m])",
+            "legendFormat": "SFMC API Failures/sec"
+          },
+          {
+            "expr": "rate(sto_activity_holiday_api_requests_total[5m])",
+            "legendFormat": "Holiday API Requests/sec"
+          },
+          {
+            "expr": "rate(sto_activity_holiday_api_failures_total[5m])",
+            "legendFormat": "Holiday API Failures/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 28
+        }
+      },
+      {
+        "id": 12,
+        "title": "Cache Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_activity_cache_hits_total[5m])",
+            "legendFormat": "Cache Hits/sec"
+          },
+          {
+            "expr": "rate(sto_activity_cache_misses_total[5m])",
+            "legendFormat": "Cache Misses/sec"
+          },
+          {
+            "expr": "sto_activity_cache_size",
+            "legendFormat": "Cache Size"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate / Size",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 28
+        }
+      },
+      {
+        "id": 13,
+        "title": "Timezone Engine Statistics",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sto_activity_timezone_engine_supported_countries",
+            "legendFormat": "Supported Countries",
+            "format": "table"
+          },
+          {
+            "expr": "rate(sto_activity_timezone_calculations_total[5m])",
+            "legendFormat": "Calculations/sec",
+            "format": "table"
+          },
+          {
+            "expr": "rate(sto_activity_timezone_engine_errors_total[5m])",
+            "legendFormat": "Errors/sec",
+            "format": "table"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 36
+        }
+      },
+      {
+        "id": 14,
+        "title": "Data Quality Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_activity_geosegment_missing_total[5m])",
+            "legendFormat": "Missing Geosegment/sec"
+          },
+          {
+            "expr": "rate(sto_activity_unsupported_country_total[5m])",
+            "legendFormat": "Unsupported Country/sec"
+          },
+          {
+            "expr": "rate(sto_activity_data_extension_update_failures_total[5m])",
+            "legendFormat": "DE Update Failures/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 36
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up{job=\"sto-activity\"}, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "changes(sto_activity_build_info[1d])",
+          "titleFormat": "Deployment",
+          "textFormat": "Version: {{version}}"
+        }
+      ]
+    }
+  }
+}

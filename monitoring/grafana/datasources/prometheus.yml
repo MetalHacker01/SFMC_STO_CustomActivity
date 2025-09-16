@@ -1,0 +1,31 @@
+# Grafana datasource configuration for Prometheus
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+      customQueryParameters: ""
+      manageAlerts: true
+      alertmanagerUid: "alertmanager"
+    secureJsonData: {}
+    version: 1
+
+  - name: Alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    uid: "alertmanager"
+    editable: true
+    jsonData:
+      implementation: "prometheus"
+      handleGrafanaManagedAlerts: false
+    version: 1

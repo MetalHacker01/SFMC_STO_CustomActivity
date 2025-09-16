@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server-working.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/server-working.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "STO_DEFAULT_TIMEZONE": "America/Chicago",
+    "STO_HOLIDAY_API_ENABLED": "true"
+  },
+  "functions": {
+    "server-working.js": {
+      "maxDuration": 30
+    }
+  }
+}

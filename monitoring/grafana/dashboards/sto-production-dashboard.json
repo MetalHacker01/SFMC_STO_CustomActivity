@@ -1,0 +1,574 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "STO Activity - Production Monitoring",
+    "tags": ["sto-activity", "production", "sfmc", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Status Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"sto-activity\"}",
+            "legendFormat": "Service Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            },
+            "unit": "none"
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sto_activity_health_status",
+            "legendFormat": "Health"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "UNHEALTHY",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "HEALTHY",
+                    "color": "green"
+                  },
+                  "2": {
+                    "text": "DEGRADED",
+                    "color": "yellow"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 4,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Contacts Processed (Last Hour)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(sto_contacts_processed_total[1h])",
+            "legendFormat": "Contacts"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 1000
+                },
+                {
+                  "color": "red",
+                  "value": 5000
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 8,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(sto_errors_total[5m]) / rate(sto_contacts_processed_total[5m]) * 100",
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 5
+                },
+                {
+                  "color": "red",
+                  "value": 10
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 5,
+        "title": "Response Time (95th percentile)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(sto_send_time_calculation_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "Response Time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 2000
+                },
+                {
+                  "color": "red",
+                  "value": 5000
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 16,
+          "y": 0
+        }
+      },
+      {
+        "id": 6,
+        "title": "Active Alerts",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "legendFormat": "Active Alerts"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": 0
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 3
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 4,
+          "x": 20,
+          "y": 0
+        }
+      },
+      {
+        "id": 7,
+        "title": "Contact Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_contacts_processed_total[5m]) * 60",
+            "legendFormat": "Contacts/min"
+          },
+          {
+            "expr": "rate(sto_contacts_processed_total{status=\"success\"}[5m]) * 60",
+            "legendFormat": "Successful/min"
+          },
+          {
+            "expr": "rate(sto_contacts_processed_total{status=\"error\"}[5m]) * 60",
+            "legendFormat": "Failed/min"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Contacts per minute",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 4
+        }
+      },
+      {
+        "id": 8,
+        "title": "Send Time Calculation Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(sto_send_time_calculation_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(sto_send_time_calculation_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(sto_send_time_calculation_duration_seconds_bucket[5m])) * 1000",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Milliseconds",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 4
+        }
+      },
+      {
+        "id": 9,
+        "title": "System Resource Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sto_memory_usage_bytes / 1024 / 1024",
+            "legendFormat": "Memory (MB)"
+          },
+          {
+            "expr": "sto_cpu_usage_ratio * 100",
+            "legendFormat": "CPU (%)"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Usage",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 12
+        }
+      },
+      {
+        "id": 10,
+        "title": "External API Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_sfmc_api_requests_total[5m])",
+            "legendFormat": "SFMC API Requests/sec"
+          },
+          {
+            "expr": "rate(sto_sfmc_api_failures_total[5m])",
+            "legendFormat": "SFMC API Failures/sec"
+          },
+          {
+            "expr": "rate(sto_holiday_api_requests_total[5m])",
+            "legendFormat": "Holiday API Requests/sec"
+          },
+          {
+            "expr": "rate(sto_holiday_api_failures_total[5m])",
+            "legendFormat": "Holiday API Failures/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 12
+        }
+      },
+      {
+        "id": 11,
+        "title": "Timezone Processing by Country",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (country) (rate(sto_timezone_calculations_total[1h]))",
+            "legendFormat": "{{country}}",
+            "format": "table"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 20
+        }
+      },
+      {
+        "id": 12,
+        "title": "Holiday Checks by Country",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by (country, result) (rate(sto_holiday_checks_total[1h]))",
+            "legendFormat": "{{country}} - {{result}}",
+            "format": "table"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 20
+        }
+      },
+      {
+        "id": 13,
+        "title": "Cache Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_cache_hits_total[5m])",
+            "legendFormat": "Cache Hits/sec"
+          },
+          {
+            "expr": "rate(sto_cache_misses_total[5m])",
+            "legendFormat": "Cache Misses/sec"
+          },
+          {
+            "expr": "rate(sto_cache_hits_total[5m]) / (rate(sto_cache_hits_total[5m]) + rate(sto_cache_misses_total[5m])) * 100",
+            "legendFormat": "Hit Rate (%)"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate / Percentage",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 20
+        }
+      },
+      {
+        "id": 14,
+        "title": "Data Extension Updates",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(sto_data_extension_updates_total{status=\"success\"}[5m])",
+            "legendFormat": "Successful Updates/sec"
+          },
+          {
+            "expr": "rate(sto_data_extension_updates_total{status=\"error\"}[5m])",
+            "legendFormat": "Failed Updates/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Updates/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 28
+        }
+      },
+      {
+        "id": 15,
+        "title": "Error Breakdown by Type",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (type) (rate(sto_errors_total[1h]))",
+            "legendFormat": "{{type}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 28
+        }
+      },
+      {
+        "id": 16,
+        "title": "Component Health Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sto_component_health_status",
+            "legendFormat": "{{component}}",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "UNHEALTHY",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "HEALTHY",
+                    "color": "green"
+                  },
+                  "2": {
+                    "text": "DEGRADED",
+                    "color": "yellow"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 36
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up{job=\"sto-activity\"}, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "country",
+          "type": "query",
+          "query": "label_values(sto_timezone_calculations_total, country)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "changes(sto_activity_build_info[1d])",
+          "titleFormat": "Deployment",
+          "textFormat": "Version: {{version}}"
+        },
+        {
+          "name": "Alerts",
+          "datasource": "Prometheus",
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "titleFormat": "Alert: {{alertname}}",
+          "textFormat": "{{annotations.summary}}"
+        }
+      ]
+    }
+  }
+}

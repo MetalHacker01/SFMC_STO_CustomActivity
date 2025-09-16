@@ -1,0 +1,401 @@
+# Docker Compose configuration for monitoring stack
+# This extends the main production docker-compose file with monitoring services
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Prometheus - Metrics Collection
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: sto-prometheus
+    restart: unless-stopped
+    
+    # Configuration
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--web.external-url=http://localhost:9090'
+    
+    # Volumes
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus-data:/prometheus
+    
+    # Ports
+    ports:
+      - "9090:9090"
+    
+    # Networks
+    networks:
+      - monitoring
+      - sto-network
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    # Dependencies
+    depends_on:
+      - sto-activity
+
+  # =============================================================================
+  # Alertmanager - Alert Management
+  # =============================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: sto-alertmanager
+    restart: unless-stopped
+    
+    # Configuration
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+      - '--web.route-prefix=/'
+      - '--cluster.listen-address=0.0.0.0:9094'
+    
+    # Environment variables
+    environment:
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - ALERT_EMAIL_RECIPIENTS=${ALERT_EMAIL_RECIPIENTS}
+      - BUSINESS_EMAIL_RECIPIENTS=${BUSINESS_EMAIL_RECIPIENTS}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - SLACK_CHANNEL=${SLACK_CHANNEL}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL}
+      - WEBHOOK_USERNAME=${WEBHOOK_USERNAME}
+      - WEBHOOK_PASSWORD=${WEBHOOK_PASSWORD}
+    
+    # Volumes
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/templates:/etc/alertmanager/templates:ro
+      - alertmanager-data:/alertmanager
+    
+    # Ports
+    ports:
+      - "9093:9093"
+    
+    # Networks
+    networks:
+      - monitoring
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # Grafana - Dashboards and Visualization
+  # =============================================================================
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: sto-grafana
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_USERS_AUTO_ASSIGN_ORG=true
+      - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Viewer
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_SNAPSHOTS_EXTERNAL_ENABLED=false
+    
+    # Volumes
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    
+    # Ports
+    ports:
+      - "3001:3000"
+    
+    # Networks
+    networks:
+      - monitoring
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+    
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    
+    # Dependencies
+    depends_on:
+      - prometheus
+
+  # =============================================================================
+  # Node Exporter - System Metrics
+  # =============================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: sto-node-exporter
+    restart: unless-stopped
+    
+    # Configuration
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/var/lib/node_exporter/textfile_collector'
+    
+    # Volumes
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - node-exporter-data:/var/lib/node_exporter
+    
+    # Ports
+    ports:
+      - "9100:9100"
+    
+    # Networks
+    networks:
+      - monitoring
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 32M
+    
+    # Privileged mode for system metrics
+    privileged: true
+    pid: host
+
+  # =============================================================================
+  # cAdvisor - Container Metrics
+  # =============================================================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: sto-cadvisor
+    restart: unless-stopped
+    
+    # Volumes
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    
+    # Ports
+    ports:
+      - "8080:8080"
+    
+    # Networks
+    networks:
+      - monitoring
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    # Privileged mode for container metrics
+    privileged: true
+    devices:
+      - /dev/kmsg
+
+  # =============================================================================
+  # Redis Exporter (Optional - if using Redis)
+  # =============================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.52.0
+    container_name: sto-redis-exporter
+    restart: unless-stopped
+    
+    # Environment
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    
+    # Ports
+    ports:
+      - "9121:9121"
+    
+    # Networks
+    networks:
+      - monitoring
+      - sto-network
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+    
+    # Dependencies
+    depends_on:
+      - redis
+    
+    # Only start if Redis is enabled
+    profiles:
+      - redis
+
+  # =============================================================================
+  # Postgres Exporter (Optional - if using PostgreSQL)
+  # =============================================================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.13.2
+    container_name: sto-postgres-exporter
+    restart: unless-stopped
+    
+    # Environment
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    
+    # Ports
+    ports:
+      - "9187:9187"
+    
+    # Networks
+    networks:
+      - monitoring
+      - sto-network
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+    
+    # Dependencies
+    depends_on:
+      - postgres
+    
+    # Only start if PostgreSQL is enabled
+    profiles:
+      - postgres
+
+  # =============================================================================
+  # Blackbox Exporter - External Endpoint Monitoring
+  # =============================================================================
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.24.0
+    container_name: sto-blackbox-exporter
+    restart: unless-stopped
+    
+    # Configuration
+    volumes:
+      - ./monitoring/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    
+    # Ports
+    ports:
+      - "9115:9115"
+    
+    # Networks
+    networks:
+      - monitoring
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  monitoring:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+  
+  # Reference to main application network
+  sto-network:
+    external: true
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  prometheus-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+  grafana-data:
+    driver: local
+  node-exporter-data:
+    driver: local

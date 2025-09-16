@@ -1,0 +1,263 @@
+# Alertmanager configuration for Send Time Optimization Activity
+
+global:
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: '${SMTP_FROM}'
+  smtp_auth_username: '${SMTP_USER}'
+  smtp_auth_password: '${SMTP_PASS}'
+  smtp_require_tls: true
+
+# Templates for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route configuration
+route:
+  group_by: ['alertname', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: 'default-receiver'
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 10s
+      repeat_interval: 5m
+      routes:
+        # SFMC integration failures
+        - match:
+            alertname: STOSFMCAPIFailures
+          receiver: 'sfmc-integration-alerts'
+        # Application down
+        - match:
+            alertname: STOActivityDown
+          receiver: 'application-down-alerts'
+
+    # Warning alerts - standard notification
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 2m
+      repeat_interval: 2h
+
+    # Business alerts - notify business stakeholders
+    - match:
+        service: sto-activity
+      match_re:
+        alertname: '(STOContactProcessingFailures|STOJourneyBuilderIntegrationFailures)'
+      receiver: 'business-alerts'
+
+# Inhibition rules to reduce noise
+inhibit_rules:
+  # If application is down, don't alert on other issues
+  - source_match:
+      alertname: STOActivityDown
+    target_match_re:
+      alertname: '(STOHighResponseTime|STOHighErrorRate|STOHighMemoryUsage)'
+    equal: ['service']
+
+  # If SFMC API is failing, don't alert on data extension updates
+  - source_match:
+      alertname: STOSFMCAPIFailures
+    target_match:
+      alertname: STODataExtensionUpdateFailures
+    equal: ['service']
+
+# Receivers configuration
+receivers:
+  # Default receiver
+  - name: 'default-receiver'
+    email_configs:
+      - to: '${ALERT_EMAIL_RECIPIENTS}'
+        subject: '[STO Activity] {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Service: {{ .Labels.service }}
+          {{ end }}
+
+  # Critical alerts - multiple channels
+  - name: 'critical-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_RECIPIENTS}'
+        subject: '[CRITICAL] STO Activity Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          🚨 CRITICAL ALERT 🚨
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Service: {{ .Labels.service }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+        headers:
+          Priority: 'high'
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '${SLACK_CHANNEL}'
+        title: '🚨 Critical Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Service:* {{ .Labels.service }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+    
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: '${WEBHOOK_USERNAME}'
+            password: '${WEBHOOK_PASSWORD}'
+
+  # Application down alerts
+  - name: 'application-down-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_RECIPIENTS}'
+        subject: '[URGENT] STO Activity is DOWN'
+        body: |
+          🔴 URGENT: Send Time Optimization Activity is DOWN
+          
+          The STO Activity application is not responding and needs immediate attention.
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+          
+          Immediate Actions Required:
+          1. Check application logs
+          2. Verify server resources
+          3. Restart application if necessary
+          4. Escalate if issue persists
+        headers:
+          Priority: 'urgent'
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '${SLACK_CHANNEL}'
+        title: '🔴 URGENT: STO Activity is DOWN'
+        text: |
+          The Send Time Optimization Activity is not responding!
+          
+          {{ range .Alerts }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+          
+          @channel - Immediate attention required!
+        color: 'danger'
+
+  # SFMC integration alerts
+  - name: 'sfmc-integration-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_RECIPIENTS}'
+        subject: '[CRITICAL] SFMC Integration Failure'
+        body: |
+          🔴 CRITICAL: SFMC Integration Failure
+          
+          The STO Activity is experiencing failures communicating with Salesforce Marketing Cloud.
+          This will impact Journey Builder functionality.
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+          
+          Troubleshooting Steps:
+          1. Check SFMC API credentials
+          2. Verify network connectivity
+          3. Check SFMC service status
+          4. Review authentication tokens
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '${SLACK_CHANNEL}'
+        title: '🔴 SFMC Integration Failure'
+        text: |
+          Critical issue with SFMC integration detected!
+          
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        color: 'danger'
+
+  # Warning alerts
+  - name: 'warning-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_RECIPIENTS}'
+        subject: '[WARNING] STO Activity: {{ .GroupLabels.alertname }}'
+        body: |
+          ⚠️ WARNING ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Service: {{ .Labels.service }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+    
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '${SLACK_CHANNEL}'
+        title: '⚠️ Warning: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        color: 'warning'
+        send_resolved: true
+
+  # Business alerts
+  - name: 'business-alerts'
+    email_configs:
+      - to: '${BUSINESS_EMAIL_RECIPIENTS}'
+        subject: '[BUSINESS IMPACT] STO Activity: {{ .GroupLabels.alertname }}'
+        body: |
+          📊 BUSINESS IMPACT ALERT
+          
+          The Send Time Optimization Activity is experiencing issues that may impact
+          marketing campaigns and customer communications.
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+          
+          Business Impact:
+          - Journey Builder campaigns may be affected
+          - Send time optimization may not function correctly
+          - Customer email delivery timing may be impacted
+          
+          The technical team has been notified and is investigating.
+
+# Global configuration
+global:
+  # Resolve timeout
+  resolve_timeout: 5m
+  
+  # External URL for links in notifications
+  external_url: 'http://alertmanager:9093'
+  
+  # SMTP configuration
+  smtp_hello: 'alertmanager'
+  smtp_require_tls: true

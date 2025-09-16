@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: sto-activity
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: STO_DEFAULT_TIMEZONE
+        value: America/Chicago
+      - key: STO_HOLIDAY_API_ENABLED
+        value: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: APP_EXTENSION_KEY
+        value: sto-activity-key
+    healthCheckPath: /health
