@@ -269,3 +269,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Made with ❤️ for the SFMC community**
 
 For questions or support, please open an issue or reach out to the maintainers.
+=======
+# SFMC_STO_CustomActivity
+Custom Journey Builder Activity to manage the send date and time for always-on journeys
+>>>>>>> 2ef7985a23f21b809f2b2e9565b0b7ee8dbc17e4
