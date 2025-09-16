@@ -308,13 +308,13 @@ app.use((req, res) => {
 // START SERVER
 // =============================================================================
 
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🎉 Working STO Server is running!`);
-    console.log(`📍 URL: http://127.0.0.1:${PORT}`);
-    console.log(`🏥 Health Check: http://127.0.0.1:${PORT}/health`);
-    console.log(`🎛️  Activity UI: http://127.0.0.1:${PORT}`);
-    console.log(`📊 Debug Config: http://127.0.0.1:${PORT}/debug/config`);
-    console.log(`🌍 Timezone Test: http://127.0.0.1:${PORT}/debug/timezone/US`);
+    console.log(`📍 URL: http://0.0.0.0:${PORT}`);
+    console.log(`🏥 Health Check: http://0.0.0.0:${PORT}/health`);
+    console.log(`🎛️  Activity UI: http://0.0.0.0:${PORT}`);
+    console.log(`📊 Debug Config: http://0.0.0.0:${PORT}/debug/config`);
+    console.log(`🌍 Timezone Test: http://0.0.0.0:${PORT}/debug/timezone/US`);
     console.log(`\n🧪 Ready for STO testing!`);
 });
 
