@@ -136,7 +136,7 @@ app.get('/health', (req, res) => {
 
 // Main page
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index-local.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Original page for comparison
